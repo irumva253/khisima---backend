@@ -9,6 +9,8 @@ import connectDB from '../config/db.js';
 import { notFound, errorHandler } from '../middleware/errorMiddleware.js';
 import authRoutes from '../routes/authRoutes.js';
 
+
+
 dotenv.config();
 
 const port = process.env.PORT || 5000;

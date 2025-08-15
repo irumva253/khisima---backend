@@ -2,6 +2,87 @@ import User from '../models/userModel.js';
 import asyncHandler from '../middleware/asyncHandler.js';
 import generateToken from '../utils/generateToken.js';
 import { validationResult } from 'express-validator';
+import sendEmail from '../utils/sendEmail.js';
+import generateResetPasswordEmail from '../utils/resetPasswordEmail.js';
+import crypto from 'crypto';
+
+
+
+// @desc    Forgot password - send reset token
+// @route   POST /api/auth/forgot-password
+// @access  Public
+export const forgotPassword = asyncHandler(async (req, res) => {
+  const { email } = req.body;
+
+  if (!email) {
+    res.status(400);
+    throw new Error('Email is required');
+  }
+
+  const user = await User.findOne({ email });
+  if (!user || user.status !== 'active') {
+    res.status(404);
+    throw new Error('Active user not found with this email');
+  }
+
+  // Generate token
+  const resetToken = user.generatePasswordResetToken();
+  await user.save();
+
+  // Create reset URL
+  const resetUrl = `${process.env.FRONTEND_URL}/reset-password/${resetToken}`;
+
+  // Prepare email HTML
+  const emailHTML = generateResetPasswordEmail(user.firstName, resetUrl);
+
+  try {
+    await sendEmail({
+      to: user.email,
+      subject: 'Password Reset Request',
+      html: emailHTML
+    });
+
+    res.status(200).json({ message: 'Password reset email sent' });
+  } catch (error) {
+    user.passwordResetToken = undefined;
+    user.passwordResetExpires = undefined;
+    await user.save();
+    res.status(500);
+    throw new Error('Email could not be sent');
+  }
+});
+
+// @desc    Reset password using token
+// @route   POST /api/auth/reset-password/:token
+// @access  Public
+export const resetPassword = asyncHandler(async (req, res) => {
+  const { token } = req.params;
+  const { password } = req.body;
+
+  if (!password) {
+    res.status(400);
+    throw new Error('Password is required');
+  }
+
+  const hashedToken = crypto.createHash('sha256').update(token).digest('hex');
+
+  const user = await User.findOne({
+    passwordResetToken: hashedToken,
+    passwordResetExpires: { $gt: Date.now() }
+  });
+
+  if (!user) {
+    res.status(400);
+    throw new Error('Invalid or expired reset token');
+  }
+
+  user.password = password;
+  user.passwordResetToken = undefined;
+  user.passwordResetExpires = undefined;
+  await user.save();
+
+  res.status(200).json({ message: 'Password reset successful' });
+});
 
 // @desc    Register a new user
 // @route   POST /api/auth/register

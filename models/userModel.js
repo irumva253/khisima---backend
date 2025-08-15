@@ -1,5 +1,7 @@
 import mongoose from 'mongoose';
 import bcrypt from 'bcryptjs';
+import crypto from 'crypto';
+
 
 const userSchema = new mongoose.Schema(
   {
@@ -168,9 +170,10 @@ userSchema.methods.generatePasswordResetToken = function() {
     .createHash('sha256')
     .update(resetToken)
     .digest('hex');
-  this.passwordResetExpires = Date.now() + 3600000; // 1 hour
+  this.passwordResetExpires = Date.now() + 5 * 60 * 1000; // 5 minutes
   return resetToken;
 };
+
 
 // Account lockout for too many failed attempts
 userSchema.methods.incrementLoginAttempts = async function() {
