@@ -9,6 +9,8 @@ import connectDB from '../config/db.js';
 import { notFound, errorHandler } from '../middleware/errorMiddleware.js';
 import authRoutes from '../routes/authRoutes.js';
 
+import notificationRoutes from '../routes/notificationRoutes.js'; 
+
 
 
 dotenv.config();
@@ -30,8 +32,7 @@ app.use(cookieParser());
 
 // Routes
 app.use('/api/auth', authRoutes);
-
-
+app.use('/api/notifications', notificationRoutes);
 
 // Static files and uploads
 const __dirname = path.resolve();

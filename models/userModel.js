@@ -2,7 +2,6 @@ import mongoose from 'mongoose';
 import bcrypt from 'bcryptjs';
 import crypto from 'crypto';
 
-
 const userSchema = new mongoose.Schema(
   {
     firstName: {
@@ -22,7 +21,7 @@ const userSchema = new mongoose.Schema(
     email: {
       type: String,
       required: [true, 'Email is required'],
-      unique: true,
+      unique: true, // unique index here
       trim: true,
       lowercase: true,
       validate: {
@@ -48,58 +47,24 @@ const userSchema = new mongoose.Schema(
       minlength: [8, 'Password must be at least 8 characters'],
       select: false
     },
-    role: {
-      type: String,
-      enum: ['user', 'admin', 'moderator'],
-      default: 'user'
-    },
-    status: {
-      type: String,
-      enum: ['pending', 'active', 'suspended'],
-      default: 'pending'
-    },
-    emailVerified: {
-      type: Boolean,
-      default: false
-    },
+    role: { type: String, enum: ['user', 'admin', 'moderator'], default: 'user' },
+    status: { type: String, enum: ['pending', 'active', 'suspended'], default: 'pending' },
+    emailVerified: { type: Boolean, default: false },
     verificationToken: String,
     passwordResetToken: String,
     passwordResetExpires: Date,
     lastLogin: Date,
-    loginAttempts: {
-      type: Number,
-      default: 0
-    },
+    loginAttempts: { type: Number, default: 0 },
     lockUntil: Date,
-    agreeToTerms: {
-      type: Boolean,
-      required: [true, 'You must agree to the terms and conditions'],
-      default: false
-    },
-    agreeToMarketing: {
-      type: Boolean,
-      default: false
-    },
+    agreeToTerms: { type: Boolean, required: [true, 'You must agree to the terms and conditions'], default: false },
+    agreeToMarketing: { type: Boolean, default: false },
     profileImage: String,
-    timezone: {
-      type: String,
-      default: 'UTC'
-    },
+    timezone: { type: String, default: 'UTC' },
     preferences: {
-      theme: {
-        type: String,
-        enum: ['light', 'dark', 'system'],
-        default: 'system'
-      },
+      theme: { type: String, enum: ['light', 'dark', 'system'], default: 'system' },
       notifications: {
-        email: {
-          type: Boolean,
-          default: true
-        },
-        push: {
-          type: Boolean,
-          default: false
-        }
+        email: { type: Boolean, default: true },
+        push: { type: Boolean, default: false }
       }
     }
   },
@@ -129,16 +94,12 @@ userSchema.virtual('fullName').get(function() {
   return `${this.firstName} ${this.lastName}`;
 });
 
-// Indexes
-userSchema.index({ email: 1 }, { unique: true });
+// Additional indexes
 userSchema.index({ status: 1, role: 1 });
 
 // Hash password before saving
 userSchema.pre('save', async function(next) {
-  if (!this.isModified('password')) {
-    return next();
-  }
-
+  if (!this.isModified('password')) return next();
   try {
     const salt = await bcrypt.genSalt(10);
     this.password = await bcrypt.hash(this.password, salt);
@@ -148,45 +109,28 @@ userSchema.pre('save', async function(next) {
   }
 });
 
-// Method to compare passwords
+// Methods
 userSchema.methods.matchPassword = async function(enteredPassword) {
   return await bcrypt.compare(enteredPassword, this.password);
 };
 
-// Method to generate verification token
 userSchema.methods.generateVerificationToken = function() {
   const token = crypto.randomBytes(20).toString('hex');
-  this.verificationToken = crypto
-    .createHash('sha256')
-    .update(token)
-    .digest('hex');
+  this.verificationToken = crypto.createHash('sha256').update(token).digest('hex');
   return token;
 };
 
-// Method to generate password reset token
 userSchema.methods.generatePasswordResetToken = function() {
   const resetToken = crypto.randomBytes(20).toString('hex');
-  this.passwordResetToken = crypto
-    .createHash('sha256')
-    .update(resetToken)
-    .digest('hex');
+  this.passwordResetToken = crypto.createHash('sha256').update(resetToken).digest('hex');
   this.passwordResetExpires = Date.now() + 5 * 60 * 1000; // 5 minutes
   return resetToken;
 };
 
-
-// Account lockout for too many failed attempts
 userSchema.methods.incrementLoginAttempts = async function() {
-  if (this.lockUntil && this.lockUntil > Date.now()) {
-    throw new Error('Account is temporarily locked');
-  }
-
+  if (this.lockUntil && this.lockUntil > Date.now()) throw new Error('Account is temporarily locked');
   this.loginAttempts += 1;
-  
-  if (this.loginAttempts >= 5) {
-    this.lockUntil = Date.now() + 15 * 60 * 1000; // 15 minutes lock
-  }
-
+  if (this.loginAttempts >= 5) this.lockUntil = Date.now() + 15 * 60 * 1000; // 15 mins
   await this.save();
 };
 
@@ -197,5 +141,4 @@ userSchema.methods.resetLoginAttempts = async function() {
 };
 
 const User = mongoose.model('User', userSchema);
-
 export default User;
