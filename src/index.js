@@ -8,6 +8,8 @@ import connectDB from '../config/db.js';
 
 import { notFound, errorHandler } from '../middleware/errorMiddleware.js';
 import authRoutes from '../routes/authRoutes.js';
+import serviceCategoryRoutes from '../routes/serviceCategoryRoutes.js';
+import serviceRoutes from '../routes/serviceRoutes.js';
 
 import notificationRoutes from '../routes/notificationRoutes.js'; 
 
@@ -32,6 +34,8 @@ app.use(cookieParser());
 
 // Routes
 app.use('/api/auth', authRoutes);
+app.use('/api/service-categories', serviceCategoryRoutes);
+app.use('/api/services', serviceRoutes);
 app.use('/api/notifications', notificationRoutes);
 
 // Static files and uploads
