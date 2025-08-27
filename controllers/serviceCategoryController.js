@@ -14,10 +14,7 @@ export const createServiceCategory = asyncHandler(async (req, res) => {
     iconSvg,
   });
 
-  res.status(201).json({
-    success: true,
-    data: serviceCategory,
-  });
+  res.status(201).json({ success: true, data: serviceCategory });
 });
 
 // @desc    Get all service categories

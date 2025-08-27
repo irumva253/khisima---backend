@@ -23,14 +23,17 @@ const serviceCategoryValidation = [
   body('iconUrl').optional().isURL().withMessage('Icon URL must be a valid URL'),
 ];
 
+// Public routes
+router.route('/').get(getServiceCategories);
+router.route('/:id').get(getServiceCategory);
+
+// Admin-only routes
 router
   .route('/')
-  .post(protect, admin, serviceCategoryValidation, validateRequest, createServiceCategory)
-  .get(protect, admin, getServiceCategories);
+  .post(protect, admin, serviceCategoryValidation, validateRequest, createServiceCategory);
 
 router
   .route('/:id')
-  .get(protect, admin, getServiceCategory)
   .put(protect, admin, serviceCategoryValidation, validateRequest, updateServiceCategory)
   .delete(protect, admin, deleteServiceCategory);
 

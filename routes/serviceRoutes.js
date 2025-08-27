@@ -1,3 +1,4 @@
+// routes/serviceRoutes.js
 import express from "express";
 import {
   createService,
@@ -7,28 +8,40 @@ import {
   deleteService,
   getServicesByCategory,
   getServiceCategories,
-  
 } from "../controllers/serviceController.js";
 import { protect, admin } from "../middleware/authMiddleware.js";
 
 const router = express.Router();
 
-// serviceRoutes.js
-router.route('/')
-  .get(getServices)
-  .post(protect, admin, createService);
+/**
+ * @route   /api/services
+ * @desc    Services CRUD
+ */
+router
+  .route("/")
+  .get(getServices)                     // Public → Get all services
+  .post(protect, admin, createService); // Admin → Create service
 
-// Add this new route
-router.route('/category/:categoryId')
-  .get(getServicesByCategory);
+/**
+ * @route   /api/services/categories
+ * @desc    Get all service categories
+ */
+router.route("/categories").get(getServiceCategories);
 
-router.route('/:id')
-  .get(getService)
-  .put(protect, admin, updateService)
-  .delete(protect, admin, deleteService);
+/**
+ * @route   /api/services/category/:categoryId
+ * @desc    Get all services under a specific category
+ */
+router.route("/category/:categoryId").get(getServicesByCategory);
 
-// Add this if you want categories via service API
-router.route('/categories')
-  .get(getServiceCategories);
+/**
+ * @route   /api/services/:id
+ * @desc    Single service operations
+ */
+router
+  .route("/:id")
+  .get(getService)                      // Public → Get one service
+  .put(protect, admin, updateService)   // Admin → Update service
+  .delete(protect, admin, deleteService); // Admin → Delete service
 
 export default router;
