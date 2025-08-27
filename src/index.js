@@ -5,15 +5,13 @@ import cookieParser from 'cookie-parser';
 import cors from 'cors';
 import connectDB from '../config/db.js';
 
-
 import { notFound, errorHandler } from '../middleware/errorMiddleware.js';
+import s3Routes from '../routes/s3Routes.js';
+
 import authRoutes from '../routes/authRoutes.js';
 import serviceCategoryRoutes from '../routes/serviceCategoryRoutes.js';
 import serviceRoutes from '../routes/serviceRoutes.js';
-
-import notificationRoutes from '../routes/notificationRoutes.js'; 
-
-
+import notificationRoutes from '../routes/notificationRoutes.js';
 
 dotenv.config();
 
@@ -22,10 +20,14 @@ const port = process.env.PORT || 5000;
 connectDB();
 
 const app = express();
-app.use(cors({
-  origin: 'http://localhost:5173', 
-  credentials: true,               
-}));
+
+// Enable CORS for frontend
+app.use(
+  cors({
+    origin: 'http://localhost:5173', 
+    credentials: true,
+  })
+);
 
 // Middleware
 app.use(express.json());
@@ -37,8 +39,9 @@ app.use('/api/auth', authRoutes);
 app.use('/api/service-categories', serviceCategoryRoutes);
 app.use('/api/services', serviceRoutes);
 app.use('/api/notifications', notificationRoutes);
+app.use('/api/s3', s3Routes);
 
-// Static files and uploads
+// Static files for uploads
 const __dirname = path.resolve();
 
 if (process.env.NODE_ENV === 'production') {
@@ -50,9 +53,7 @@ if (process.env.NODE_ENV === 'production') {
   );
 } else {
   app.use('/uploads', express.static(path.join(__dirname, '/uploads')));
-  app.get('/', (req, res) => {
-    res.send('API is running...');
-  });
+  app.get('/', (req, res) => res.send('API is running...'));
 }
 
 // Error middleware
@@ -63,6 +64,5 @@ app.use(errorHandler);
 app.listen(port, () => {
   console.log(`Server running in ${process.env.NODE_ENV} mode on port ${port}`);
 });
-
 
 export { app };

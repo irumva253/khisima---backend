@@ -12,6 +12,7 @@ import slugify from "slugify";
 const createService = asyncHandler(async (req, res) => {
   const {
     title,
+    slug,
     smallDescription,
     description,
     category,
@@ -21,6 +22,14 @@ const createService = asyncHandler(async (req, res) => {
     videoUrl,
   } = req.body;
 
+  console.log("Received service data:", {
+    title,
+    slug,
+    descriptionType: typeof description,
+    descriptionLength: typeof description === 'string' ? description.length : 'N/A',
+    category,
+  });
+
   // Validate category exists
   const categoryExists = await ServiceCategory.findById(category);
   if (!categoryExists) {
@@ -28,19 +37,59 @@ const createService = asyncHandler(async (req, res) => {
     throw new Error("Invalid category ID");
   }
 
+  // Use provided slug or generate from title
+  const serviceSlug = slug || slugify(title, { lower: true, strict: true });
+
+  // Ensure description is properly formatted
+  let formattedDescription = description;
+  if (typeof description === 'string') {
+    try {
+      // Parse and validate the JSON structure
+      const parsedDesc = JSON.parse(description);
+      if (parsedDesc && parsedDesc.type === 'doc') {
+        formattedDescription = parsedDesc;
+      }
+    } catch (error) {
+      // If it's not valid JSON, create a simple paragraph structure
+      formattedDescription = {
+        type: 'doc',
+        content: [
+          {
+            type: 'paragraph',
+            attrs: { textAlign: 'left' },
+            content: [
+              {
+                type: 'text',
+                text: description
+              }
+            ]
+          }
+        ]
+      };
+    }
+  }
+
   const service = new Service({
     title,
-    slug: slugify(title, { lower: true, strict: true }),
+    slug: serviceSlug,
     smallDescription,
-    description,
+    description: formattedDescription,
     category,
-    price,
+    price: price || 0,
     status: status || "draft",
-    fileKey,
-    videoUrl,
+    fileKey: fileKey || "",
+    videoUrl: videoUrl || "",
   });
 
   const createdService = await service.save();
+  
+  console.log("Service created successfully:", {
+    id: createdService._id,
+    title: createdService.title,
+    slug: createdService.slug,
+    descriptionType: typeof createdService.description,
+  });
+  
   res.status(201).json({ success: true, data: createdService });
 });
 
@@ -54,7 +103,35 @@ const getServices = asyncHandler(async (req, res) => {
     "category",
     "title caption iconSvg"
   );
-  res.json({ success: true, data: services });
+  
+  // Ensure descriptions are properly formatted
+  const formattedServices = services.map(service => {
+    if (typeof service.description === 'string') {
+      try {
+        service.description = JSON.parse(service.description);
+      } catch (error) {
+        // If parsing fails, create a basic structure
+        service.description = {
+          type: 'doc',
+          content: [
+            {
+              type: 'paragraph',
+              attrs: { textAlign: 'left' },
+              content: [
+                {
+                  type: 'text',
+                  text: service.description
+                }
+              ]
+            }
+          ]
+        };
+      }
+    }
+    return service;
+  });
+  
+  res.json({ success: true, data: formattedServices });
 });
 
 /**
@@ -69,6 +146,31 @@ const getService = asyncHandler(async (req, res) => {
   );
 
   if (service) {
+    // Ensure description is properly formatted
+    if (typeof service.description === 'string') {
+      try {
+        service.description = JSON.parse(service.description);
+      } catch (error) {
+        // If parsing fails, create a basic structure
+        service.description = {
+          type: 'doc',
+          content: [
+            {
+              type: 'paragraph',
+              attrs: { textAlign: 'left' },
+              content: [
+                {
+                  type: 'text',
+                  text: service.description
+                }
+              ]
+            }
+          ]
+        };
+      }
+    }
+    
+    console.log(`Retrieved service: ${service.title}, Description type: ${typeof service.description}`);
     res.json({ success: true, data: service });
   } else {
     res.status(404);
@@ -84,6 +186,7 @@ const getService = asyncHandler(async (req, res) => {
 const updateService = asyncHandler(async (req, res) => {
   const {
     title,
+    slug,
     smallDescription,
     description,
     category,
@@ -93,6 +196,13 @@ const updateService = asyncHandler(async (req, res) => {
     videoUrl,
   } = req.body;
 
+  console.log("Updating service with data:", {
+    title,
+    slug,
+    descriptionType: typeof description,
+    category,
+  });
+
   const service = await Service.findById(req.params.id);
 
   if (!service) {
@@ -100,17 +210,52 @@ const updateService = asyncHandler(async (req, res) => {
     throw new Error("Service not found");
   }
 
+  // Format description if needed
+  let formattedDescription = description;
+  if (typeof description === 'string') {
+    try {
+      const parsedDesc = JSON.parse(description);
+      if (parsedDesc && parsedDesc.type === 'doc') {
+        formattedDescription = parsedDesc;
+      }
+    } catch (error) {
+      formattedDescription = {
+        type: 'doc',
+        content: [
+          {
+            type: 'paragraph',
+            attrs: { textAlign: 'left' },
+            content: [
+              {
+                type: 'text',
+                text: description
+              }
+            ]
+          }
+        ]
+      };
+    }
+  }
+
   service.title = title || service.title;
-  service.slug = title ? slugify(title, { lower: true, strict: true }) : service.slug;
+  service.slug = slug ? slug : (title ? slugify(title, { lower: true, strict: true }) : service.slug);
   service.smallDescription = smallDescription || service.smallDescription;
-  service.description = description || service.description;
+  service.description = formattedDescription !== undefined ? formattedDescription : service.description;
   service.category = category || service.category;
-  service.price = price || service.price;
+  service.price = price !== undefined ? price : service.price;
   service.status = status || service.status;
-  service.fileKey = fileKey || service.fileKey;
+  service.fileKey = fileKey !== undefined ? fileKey : service.fileKey;
   service.videoUrl = videoUrl || service.videoUrl;
 
   const updatedService = await service.save();
+  
+  console.log("Service updated successfully:", {
+    id: updatedService._id,
+    title: updatedService.title,
+    slug: updatedService.slug,
+    descriptionType: typeof updatedService.description,
+  });
+  
   res.json({ success: true, data: updatedService });
 });
 
@@ -141,7 +286,34 @@ const getServicesByCategory = asyncHandler(async (req, res) => {
     "category",
     "title caption iconSvg"
   );
-  res.json({ success: true, data: services });
+  
+  // Ensure descriptions are properly formatted
+  const formattedServices = services.map(service => {
+    if (typeof service.description === 'string') {
+      try {
+        service.description = JSON.parse(service.description);
+      } catch (error) {
+        service.description = {
+          type: 'doc',
+          content: [
+            {
+              type: 'paragraph',
+              attrs: { textAlign: 'left' },
+              content: [
+                {
+                  type: 'text',
+                  text: service.description
+                }
+              ]
+            }
+          ]
+        };
+      }
+    }
+    return service;
+  });
+  
+  res.json({ success: true, data: formattedServices });
 });
 
 /**

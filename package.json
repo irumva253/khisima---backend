@@ -16,6 +16,8 @@
   "license": "ISC",
   "packageManager": "pnpm@10.12.4",
   "dependencies": {
+    "@aws-sdk/client-s3": "^3.876.0",
+    "@aws-sdk/s3-request-presigner": "^3.876.0",
     "@kinde-oss/kinde-node-express": "^1.6.0",
     "@reduxjs/toolkit": "^2.8.2",
     "axios": "^1.11.0",
