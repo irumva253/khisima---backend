@@ -13,6 +13,8 @@ import serviceCategoryRoutes from '../routes/serviceCategoryRoutes.js';
 import serviceRoutes from '../routes/serviceRoutes.js';
 import notificationRoutes from '../routes/notificationRoutes.js';
 
+import partnerRoutes from '../routes/partnerRoutes.js';
+
 dotenv.config();
 
 const port = process.env.PORT || 5000;
@@ -40,6 +42,8 @@ app.use('/api/service-categories', serviceCategoryRoutes);
 app.use('/api/services', serviceRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/s3', s3Routes);
+
+app.use('/api/partners', partnerRoutes);
 
 // Static files for uploads
 const __dirname = path.resolve();
