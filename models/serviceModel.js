@@ -18,17 +18,13 @@ const serviceSchema = new mongoose.Schema(
       trim: true,
     },
     description: {
-      type: String,
-      trim: true,
+      type: mongoose.Schema.Types.Mixed,  // ✅ supports Tiptap JSON
+      required: true,
     },
     category: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "ServiceCategory",
       required: true,
-    },
-    price: {
-      type: Number,
-      default: 0,
     },
     status: {
       type: String,

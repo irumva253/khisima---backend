@@ -43,12 +43,6 @@ router.post("/upload", async (req, res) => {
     const sanitizedFileName = fileName.replace(/[^a-zA-Z0-9.-]/g, '_');
     const key = `uploads/${Date.now()}-${sanitizedFileName}`;
 
-    console.log("Generating presigned URL for:", {
-      bucket: AWS_BUCKET_NAME,
-      key,
-      contentType
-    });
-
     const command = new PutObjectCommand({
       Bucket: AWS_BUCKET_NAME,
       Key: key,
@@ -62,8 +56,6 @@ router.post("/upload", async (req, res) => {
       // Force the SDK to use the correct endpoint
       signingRegion: AWS_REGION || "auto",
     });
-
-    console.log("Generated presigned URL:", presignedUrl);
 
     res.json({ presignedUrl, key });
   } catch (err) {

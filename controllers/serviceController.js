@@ -16,19 +16,11 @@ const createService = asyncHandler(async (req, res) => {
     smallDescription,
     description,
     category,
-    price,
     status,
     fileKey,
     videoUrl,
   } = req.body;
 
-  console.log("Received service data:", {
-    title,
-    slug,
-    descriptionType: typeof description,
-    descriptionLength: typeof description === 'string' ? description.length : 'N/A',
-    category,
-  });
 
   // Validate category exists
   const categoryExists = await ServiceCategory.findById(category);
@@ -75,7 +67,6 @@ const createService = asyncHandler(async (req, res) => {
     smallDescription,
     description: formattedDescription,
     category,
-    price: price || 0,
     status: status || "draft",
     fileKey: fileKey || "",
     videoUrl: videoUrl || "",
@@ -83,12 +74,6 @@ const createService = asyncHandler(async (req, res) => {
 
   const createdService = await service.save();
   
-  console.log("Service created successfully:", {
-    id: createdService._id,
-    title: createdService.title,
-    slug: createdService.slug,
-    descriptionType: typeof createdService.description,
-  });
   
   res.status(201).json({ success: true, data: createdService });
 });
@@ -169,8 +154,7 @@ const getService = asyncHandler(async (req, res) => {
         };
       }
     }
-    
-    console.log(`Retrieved service: ${service.title}, Description type: ${typeof service.description}`);
+
     res.json({ success: true, data: service });
   } else {
     res.status(404);
@@ -190,18 +174,10 @@ const updateService = asyncHandler(async (req, res) => {
     smallDescription,
     description,
     category,
-    price,
     status,
     fileKey,
     videoUrl,
   } = req.body;
-
-  console.log("Updating service with data:", {
-    title,
-    slug,
-    descriptionType: typeof description,
-    category,
-  });
 
   const service = await Service.findById(req.params.id);
 
@@ -242,19 +218,12 @@ const updateService = asyncHandler(async (req, res) => {
   service.smallDescription = smallDescription || service.smallDescription;
   service.description = formattedDescription !== undefined ? formattedDescription : service.description;
   service.category = category || service.category;
-  service.price = price !== undefined ? price : service.price;
   service.status = status || service.status;
   service.fileKey = fileKey !== undefined ? fileKey : service.fileKey;
   service.videoUrl = videoUrl || service.videoUrl;
 
   const updatedService = await service.save();
   
-  console.log("Service updated successfully:", {
-    id: updatedService._id,
-    title: updatedService.title,
-    slug: updatedService.slug,
-    descriptionType: typeof updatedService.description,
-  });
   
   res.json({ success: true, data: updatedService });
 });
