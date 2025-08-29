@@ -65,9 +65,37 @@ const careerApplicationSchema = new mongoose.Schema(
       trim: true,
       validate: {
         validator: function(v) {
-          return !v || /^https?:\/\/.+/.test(v);
+          if (!v) return true; // Empty is allowed
+          
+          // Try to parse as URL - if it fails, try adding https://
+          try {
+            new URL(v);
+            return true;
+          } catch (e) {
+            try {
+              new URL('https://' + v);
+              return true;
+            } catch (e2) {
+              return false;
+            }
+          }
         },
-        message: 'Portfolio URL must be a valid URL'
+        message: 'Portfolio URL must be a valid URL (e.g., https://example.com or example.com)'
+      },
+      set: function(v) {
+        if (!v) return v;
+        
+        // Auto-add https:// if missing and it looks like a domain
+        try {
+          new URL(v);
+          return v; // Already valid
+        } catch (e) {
+          // Check if it looks like a domain (contains dots and no spaces)
+          if (v.includes('.') && !v.includes(' ')) {
+            return 'https://' + v;
+          }
+          return v; // Let validation handle it
+        }
       }
     },
     availability: {

@@ -36,9 +36,11 @@ const submitApplication = asyncHandler(async (req, res) => {
     throw new Error('Resume file is required');
   }
 
+  let resumeKey = null; // Initialize resumeKey
+
   try {
     // Upload resume to S3
-    const resumeKey = `resumes/${uuidv4()}-${req.file.originalname}`;
+    resumeKey = `resumes/${uuidv4()}-${req.file.originalname}`;
     await uploadToS3(req.file.buffer, resumeKey, req.file.mimetype);
 
     // Create application
@@ -65,7 +67,7 @@ const submitApplication = asyncHandler(async (req, res) => {
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #f8fafc;">
         <div style="background: linear-gradient(135deg, #2563eb 0%, #3730a3 100%); color: white; padding: 30px; border-radius: 16px; text-align: center; margin-bottom: 30px;">
           <h1 style="margin: 0; font-size: 28px; font-weight: bold;">Application Received!</h1>
-          <p style="margin: 10px 0 0 0; font-size: 16px; opacity: 0.9;">Thank you for your interest in joining ILS</p>
+          <p style="margin: 10px 0 0 0; font-size: 16px; opacity: 0.9;">Thank you for your interest in joining Khisima</p>
         </div>
         
         <div style="background: white; padding: 30px; border-radius: 16px; border: 1px solid #e5e7eb;">
@@ -91,14 +93,14 @@ const submitApplication = asyncHandler(async (req, res) => {
           </p>
           
           <div style="text-align: center; margin: 30px 0;">
-            <a href="mailto:careers@ils.com" style="background: linear-gradient(135deg, #2563eb 0%, #3730a3 100%); color: white; padding: 12px 24px; text-decoration: none; border-radius: 8px; font-weight: bold; display: inline-block;">
+            <a href="mailto:careers@khisima.com" style="background: linear-gradient(135deg, #2563eb 0%, #3730a3 100%); color: white; padding: 12px 24px; text-decoration: none; border-radius: 8px; font-weight: bold; display: inline-block;">
               Contact Our HR Team
             </a>
           </div>
           
           <p style="color: #6b7280; font-size: 14px; text-align: center; margin-top: 30px; border-top: 1px solid #e5e7eb; padding-top: 20px;">
-            This is an automated message from ILS Career Portal.<br/>
-            If you have any questions, please contact us at careers@ils.com
+            This is an automated message from Khisima Career Portal.<br/>
+            If you have any questions, please contact us at careers@khisima.com
           </p>
         </div>
       </div>
@@ -199,11 +201,11 @@ const submitApplication = asyncHandler(async (req, res) => {
     await Promise.all([
       sendEmail({
         to: email,
-        subject: 'ILS - Application Received',
+        subject: 'Khisima - Application Received',
         html: applicantEmailHtml
       }),
       sendEmail({
-        to: process.env.HR_EMAIL || 'careers@ils.com',
+        to: process.env.HR_EMAIL || 'careers@khisima.com',
         subject: `New Career Application - ${firstName} ${lastName} (${application.getPositionTitle()})`,
         html: hrEmailHtml
       })
@@ -225,7 +227,7 @@ const submitApplication = asyncHandler(async (req, res) => {
 
   } catch (error) {
     // If S3 upload failed and we have a key, try to clean up
-    if (resumeKey) {
+    if (resumeKey) { // Now resumeKey is properly defined
       try {
         await deleteFromS3(resumeKey);
       } catch (cleanupError) {
@@ -233,9 +235,20 @@ const submitApplication = asyncHandler(async (req, res) => {
       }
     }
     
-    res.status(500);
-    throw new Error('Failed to submit application. Please try again.');
-  }
+    console.error('Application submission error:', error);
+    if (error.name === 'ValidationError') {
+    const fieldErrors = Object.values(error.errors).map(err => ({
+      field: err.path,
+      message: err.message
+    }));
+    
+    res.status(400);
+    throw new Error(`Validation failed: ${fieldErrors.map(e => e.message).join(', ')}`);
+   }
+  
+  res.status(500);
+  throw new Error('Failed to submit application. Please try again.');
+}
 });
 
 // @desc    Get all applications (Admin only)
@@ -279,6 +292,7 @@ const getApplications = asyncHandler(async (req, res) => {
       }
     });
   } catch (error) {
+    console.error('Get applications error:', error);
     res.status(500);
     throw new Error('Failed to fetch applications');
   }
@@ -302,6 +316,7 @@ const getApplicationById = asyncHandler(async (req, res) => {
       data: application
     });
   } catch (error) {
+    console.error('Get application by ID error:', error);
     res.status(500);
     throw new Error('Failed to fetch application');
   }
@@ -343,7 +358,7 @@ const updateApplicationStatus = asyncHandler(async (req, res) => {
 
     switch (status) {
       case 'reviewed':
-        emailSubject = 'ILS - Application Under Review';
+        emailSubject = 'Khisima - Application Under Review';
         emailHtml = `
           <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #f8fafc;">
             <div style="background: linear-gradient(135deg, #2563eb 0%, #3730a3 100%); color: white; padding: 30px; border-radius: 16px; text-align: center; margin-bottom: 30px;">
@@ -363,7 +378,7 @@ const updateApplicationStatus = asyncHandler(async (req, res) => {
         break;
 
       case 'interviewing':
-        emailSubject = 'ILS - Interview Invitation';
+        emailSubject = 'Khisima - Interview Invitation';
         emailHtml = `
           <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #f8fafc;">
             <div style="background: linear-gradient(135deg, #059669 0%, #047857 100%); color: white; padding: 30px; border-radius: 16px; text-align: center; margin-bottom: 30px;">
@@ -408,6 +423,7 @@ const updateApplicationStatus = asyncHandler(async (req, res) => {
     });
 
   } catch (error) {
+    console.error('Update application status error:', error);
     res.status(500);
     throw new Error('Failed to update application status');
   }
@@ -443,6 +459,7 @@ const deleteApplication = asyncHandler(async (req, res) => {
     });
 
   } catch (error) {
+    console.error('Delete application error:', error);
     res.status(500);
     throw new Error('Failed to delete application');
   }
@@ -521,6 +538,7 @@ const getApplicationStats = asyncHandler(async (req, res) => {
     });
 
   } catch (error) {
+    console.error('Get application stats error:', error);
     res.status(500);
     throw new Error('Failed to fetch application statistics');
   }

@@ -1,155 +1,156 @@
+import dotenv from 'dotenv';
 import AWS from 'aws-sdk';
+import path from 'path';
+import { fileURLToPath } from 'url';
 
-// Configure AWS SDK
-AWS.config.update({
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+dotenv.config({ path: path.resolve(__dirname, '.env') });
+
+// Tigris-specific configuration
+const isTigris = process.env.AWS_ENDPOINT_URL_S3 && 
+                 process.env.AWS_ENDPOINT_URL_S3.includes('tigris') || 
+                 process.env.AWS_ENDPOINT_URL_S3.includes('t3.storage.dev');
+
+console.log('🌐 Using storage provider:', isTigris ? 'Tigris' : 'AWS S3');
+
+// Configure AWS SDK for Tigris
+const s3Config = {
   accessKeyId: process.env.AWS_ACCESS_KEY_ID,
   secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
-  region: process.env.AWS_REGION || 'us-east-1'
-});
+  region: process.env.AWS_REGION || 'auto',
+};
 
-const s3 = new AWS.S3();
+// Add Tigris-specific configuration
+if (isTigris) {
+  s3Config.endpoint = process.env.AWS_ENDPOINT_URL_S3;
+  s3Config.s3ForcePathStyle = process.env.AWS_S3_FORCE_PATH_STYLE === 'true' || true;
+  s3Config.signatureVersion = 'v4';
+  
+  console.log('🔗 Tigris endpoint:', process.env.AWS_ENDPOINT_URL_S3);
+}
+
+const s3 = new AWS.S3(s3Config);
+const BUCKET_NAME = process.env.AWS_BUCKET_NAME;
+
+if (!BUCKET_NAME) {
+  throw new Error('AWS_BUCKET_NAME environment variable is required');
+}
 
 /**
- * Upload file to S3 bucket
- * @param {Buffer} fileBuffer - File buffer data
- * @param {string} key - S3 object key (file path)
- * @param {string} contentType - File MIME type
- * @returns {Promise<Object>} Upload result
+ * Upload file to Tigris/S3
  */
 export const uploadToS3 = async (fileBuffer, key, contentType) => {
   try {
-    const params = {
-      Bucket: process.env.AWS_S3_BUCKET_NAME,
+    console.log('📤 Uploading to:', isTigris ? 'Tigris' : 'AWS S3', {
+      bucket: BUCKET_NAME,
+      key: key,
+      size: fileBuffer.length,
+      type: contentType
+    });
+
+    const uploadParams = {
+      Bucket: BUCKET_NAME,
       Key: key,
       Body: fileBuffer,
       ContentType: contentType,
-      ACL: 'private', // Private access for resume files
-      ServerSideEncryption: 'AES256',
-      Metadata: {
-        uploadedAt: new Date().toISOString(),
-        uploadedBy: 'career-portal'
-      }
     };
 
-    const result = await s3.upload(params).promise();
+    // For Tigris, you might not need ServerSideEncryption
+    if (!isTigris) {
+      uploadParams.ServerSideEncryption = 'AES256';
+    }
+
+    const result = await s3.upload(uploadParams).promise();
     
-    console.log(`File uploaded successfully to S3: ${key}`);
-    
-    return {
-      success: true,
+    console.log('✅ Upload successful:', {
       key: result.Key,
-      location: result.Location,
-      etag: result.ETag
-    };
+      location: result.Location
+    });
+
+    return result;
   } catch (error) {
-    console.error('S3 upload failed:', error);
-    throw new Error(`Failed to upload file to S3: ${error.message}`);
+    console.error('❌ Upload failed:', error.message);
+    
+    // Tigris-specific error handling
+    if (isTigris) {
+      if (error.code === 'NoSuchBucket') {
+        throw new Error(`Tigris bucket '${BUCKET_NAME}' does not exist. Create it in Tigris console.`);
+      } else if (error.code === 'AccessDenied') {
+        throw new Error('Tigris access denied. Check your Tigris credentials and permissions.');
+      }
+    }
+    
+    throw new Error(`Failed to upload file: ${error.message}`);
   }
 };
 
 /**
- * Delete file from S3 bucket
- * @param {string} key - S3 object key (file path)
- * @returns {Promise<Object>} Delete result
+ * Delete file from Tigris/S3
  */
 export const deleteFromS3 = async (key) => {
   try {
-    const params = {
-      Bucket: process.env.AWS_S3_BUCKET_NAME,
-      Key: key
-    };
+    console.log('🗑️ Deleting from:', isTigris ? 'Tigris' : 'AWS S3', {
+      bucket: BUCKET_NAME,
+      key: key
+    });
 
-    const result = await s3.deleteObject(params).promise();
-    
-    console.log(`File deleted successfully from S3: ${key}`);
-    
-    return {
-      success: true,
-      key,
-      result
-    };
-  } catch (error) {
-    console.error('S3 delete failed:', error);
-    throw new Error(`Failed to delete file from S3: ${error.message}`);
-  }
-};
-
-/**
- * Generate presigned URL for private file access
- * @param {string} key - S3 object key (file path)
- * @param {number} expiresIn - URL expiration time in seconds (default: 1 hour)
- * @returns {Promise<string>} Presigned URL
- */
-export const getPresignedUrl = async (key, expiresIn = 3600) => {
-  try {
-    const params = {
-      Bucket: process.env.AWS_S3_BUCKET_NAME,
+    const result = await s3.deleteObject({
+      Bucket: BUCKET_NAME,
       Key: key,
-      Expires: expiresIn
-    };
-
-    const url = await s3.getSignedUrlPromise('getObject', params);
+    }).promise();
     
-    return url;
+    console.log('✅ Delete successful');
+    return result;
   } catch (error) {
-    console.error('Failed to generate presigned URL:', error);
-    throw new Error(`Failed to generate download URL: ${error.message}`);
+    console.error('❌ Delete failed:', error.message);
+    throw new Error(`Failed to delete file: ${error.message}`);
   }
 };
 
 /**
- * Check if file exists in S3
- * @param {string} key - S3 object key (file path)
- * @returns {Promise<boolean>} File exists
+ * Test Tigris/S3 connection
  */
-export const fileExistsInS3 = async (key) => {
+export const testS3Connection = async () => {
   try {
-    const params = {
-      Bucket: process.env.AWS_S3_BUCKET_NAME,
-      Key: key
-    };
-
-    await s3.headObject(params).promise();
+    if (isTigris) {
+      // For Tigris, use a simpler test - try to list objects
+      await s3.listObjectsV2({ 
+        Bucket: BUCKET_NAME, 
+        MaxKeys: 1 
+      }).promise();
+      console.log('✅ Tigris connection successful');
+    } else {
+      // For AWS S3, use headBucket
+      await s3.headBucket({ Bucket: BUCKET_NAME }).promise();
+      console.log('✅ AWS S3 connection successful');
+    }
     return true;
   } catch (error) {
-    if (error.code === 'NotFound') {
-      return false;
-    }
-    throw error;
-  }
-};
-
-/**
- * Get file metadata from S3
- * @param {string} key - S3 object key (file path)
- * @returns {Promise<Object>} File metadata
- */
-export const getFileMetadata = async (key) => {
-  try {
-    const params = {
-      Bucket: process.env.AWS_S3_BUCKET_NAME,
-      Key: key
-    };
-
-    const result = await s3.headObject(params).promise();
+    console.error('❌ Connection test failed:', error.message);
     
-    return {
-      contentType: result.ContentType,
-      contentLength: result.ContentLength,
-      lastModified: result.LastModified,
-      etag: result.ETag,
-      metadata: result.Metadata
-    };
-  } catch (error) {
-    console.error('Failed to get file metadata:', error);
-    throw new Error(`Failed to get file information: ${error.message}`);
+    if (isTigris) {
+      console.log('💡 Tigris troubleshooting:');
+      console.log('   1. Check if bucket exists in Tigris console');
+      console.log('   2. Verify Tigris credentials');
+      console.log('   3. Check endpoint URL: ', process.env.AWS_ENDPOINT_URL_S3);
+    }
+    
+    return false;
   }
 };
+
+// Test connection on startup
+testS3Connection().then(success => {
+  if (success) {
+    console.log('🚀 Storage provider initialized successfully');
+  } else {
+    console.log('⚠️  Storage provider may not be fully functional');
+  }
+});
 
 export default {
   uploadToS3,
   deleteFromS3,
-  getPresignedUrl,
-  fileExistsInS3,
-  getFileMetadata
+  testS3Connection
 };
