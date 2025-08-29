@@ -15,6 +15,7 @@ import notificationRoutes from '../routes/notificationRoutes.js';
 
 import partnerRoutes from '../routes/partnerRoutes.js';
 import careerRoutes from '../routes/careerRoutes.js';
+import quoteRoutes from '../routes/quoteRoutes.js';
 
 dotenv.config();
 
@@ -46,6 +47,7 @@ app.use('/api/s3', s3Routes);
 
 app.use('/api/partners', partnerRoutes);
 app.use('/api/careers', careerRoutes);
+app.use('/api/quotes', quoteRoutes);
 
 // Static files for uploads
 const __dirname = path.resolve();
