@@ -1,7 +1,7 @@
 import mongoose from "mongoose";
 import slugify from "slugify";
 
-const serviceSchema = new mongoose.Schema(
+const solutionSchema = new mongoose.Schema(
   {
     title: {
       type: String,
@@ -23,7 +23,7 @@ const serviceSchema = new mongoose.Schema(
     },
     category: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: "ServiceCategory",
+      ref: "SolutionCategory",
       required: true,
     },
     status: {
@@ -38,13 +38,13 @@ const serviceSchema = new mongoose.Schema(
 );
 
 // Auto-generate slug from title
-serviceSchema.pre("validate", function (next) {
+solutionSchema.pre("validate", function (next) {
   if (this.title && !this.slug) {
     this.slug = slugify(this.title, { lower: true, strict: true });
   }
   next();
 });
 
-const Service = mongoose.model("Service", serviceSchema);
+const Solution = mongoose.model("Solution", solutionSchema);
 
-export default Service;
+export default Solution;

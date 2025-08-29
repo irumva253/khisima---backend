@@ -11,11 +11,16 @@ import s3Routes from '../routes/s3Routes.js';
 import authRoutes from '../routes/authRoutes.js';
 import serviceCategoryRoutes from '../routes/serviceCategoryRoutes.js';
 import serviceRoutes from '../routes/serviceRoutes.js';
+
+import solutionCategoryRoutes from '../routes/solutionCategoryRoutes.js';
+import solutionRoutes from '../routes/solutionRoutes.js';
+
 import notificationRoutes from '../routes/notificationRoutes.js';
 
 import partnerRoutes from '../routes/partnerRoutes.js';
 import careerRoutes from '../routes/careerRoutes.js';
 import quoteRoutes from '../routes/quoteRoutes.js';
+
 
 dotenv.config();
 
@@ -41,7 +46,10 @@ app.use(cookieParser());
 // Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/service-categories', serviceCategoryRoutes);
+app.use('/api/solution-categories', solutionCategoryRoutes);
 app.use('/api/services', serviceRoutes);
+app.use('/api/solutions', solutionRoutes);
+
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/s3', s3Routes);
 
