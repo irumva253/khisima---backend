@@ -20,6 +20,7 @@
     "@aws-sdk/s3-request-presigner": "^3.876.0",
     "@kinde-oss/kinde-node-express": "^1.6.0",
     "@reduxjs/toolkit": "^2.8.2",
+    "aws-sdk": "^2.1692.0",
     "axios": "^1.11.0",
     "bcrypt": "^6.0.0",
     "bcryptjs": "^3.0.2",
@@ -33,10 +34,12 @@
     "jsonwebtoken": "^9.0.2",
     "mongodb": "^6.18.0",
     "mongoose": "^8.17.1",
+    "multer": "^2.0.2",
     "nodemailer": "^7.0.5",
     "nodemon": "^3.1.10",
     "path": "^0.12.7",
     "slugify": "^1.6.6",
+    "uuid": "^11.1.0",
     "vite": "^7.1.2",
     "vite-plugin-node": "^7.0.0"
   }
