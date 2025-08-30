@@ -12,7 +12,7 @@ const isTigris = process.env.AWS_ENDPOINT_URL_S3 &&
                  process.env.AWS_ENDPOINT_URL_S3.includes('tigris') || 
                  process.env.AWS_ENDPOINT_URL_S3.includes('t3.storage.dev');
 
-console.log('🌐 Using storage provider:', isTigris ? 'Tigris' : 'AWS S3');
+//console.log('🌐 Using storage provider:', isTigris ? 'Tigris' : 'AWS S3');
 
 // Configure AWS SDK for Tigris
 const s3Config = {
@@ -27,7 +27,7 @@ if (isTigris) {
   s3Config.s3ForcePathStyle = process.env.AWS_S3_FORCE_PATH_STYLE === 'true' || true;
   s3Config.signatureVersion = 'v4';
   
-  console.log('🔗 Tigris endpoint:', process.env.AWS_ENDPOINT_URL_S3);
+//  console.log('Tigris endpoint:', process.env.AWS_ENDPOINT_URL_S3);
 }
 
 const s3 = new AWS.S3(s3Config);
@@ -42,7 +42,7 @@ if (!BUCKET_NAME) {
  */
 export const uploadToS3 = async (fileBuffer, key, contentType) => {
   try {
-    console.log('📤 Uploading to:', isTigris ? 'Tigris' : 'AWS S3', {
+    console.log('Uploading to:', isTigris ? 'Tigris' : 'AWS S3', {
       bucket: BUCKET_NAME,
       key: key,
       size: fileBuffer.length,
@@ -63,14 +63,14 @@ export const uploadToS3 = async (fileBuffer, key, contentType) => {
 
     const result = await s3.upload(uploadParams).promise();
     
-    console.log('✅ Upload successful:', {
+    console.log('Upload successful:', {
       key: result.Key,
       location: result.Location
     });
 
     return result;
   } catch (error) {
-    console.error('❌ Upload failed:', error.message);
+    console.error('Upload failed:', error.message);
     
     // Tigris-specific error handling
     if (isTigris) {
@@ -85,12 +85,28 @@ export const uploadToS3 = async (fileBuffer, key, contentType) => {
   }
 };
 
+export const getSignedDownloadUrl = async (key, expiresIn = 3600) => {
+  try {
+    const params = {
+      Bucket: BUCKET_NAME,
+      Key: key,
+      Expires: expiresIn,
+    };
+
+    const signedUrl = await s3.getSignedUrlPromise('getObject', params);
+    return signedUrl;
+  } catch (error) {
+    console.error('Error generating signed URL:', error);
+    throw new Error('Failed to generate download link');
+  }
+};
+
 /**
  * Delete file from Tigris/S3
  */
 export const deleteFromS3 = async (key) => {
   try {
-    console.log('🗑️ Deleting from:', isTigris ? 'Tigris' : 'AWS S3', {
+    console.log('Deleting from:', isTigris ? 'Tigris' : 'AWS S3', {
       bucket: BUCKET_NAME,
       key: key
     });
@@ -100,10 +116,10 @@ export const deleteFromS3 = async (key) => {
       Key: key,
     }).promise();
     
-    console.log('✅ Delete successful');
+   // console.log('Delete successful');
     return result;
   } catch (error) {
-    console.error('❌ Delete failed:', error.message);
+  //  console.error('❌ Delete failed:', error.message);
     throw new Error(`Failed to delete file: ${error.message}`);
   }
 };
@@ -119,35 +135,35 @@ export const testS3Connection = async () => {
         Bucket: BUCKET_NAME, 
         MaxKeys: 1 
       }).promise();
-      console.log('✅ Tigris connection successful');
+    //  console.log('Tigris connection successful');
     } else {
       // For AWS S3, use headBucket
       await s3.headBucket({ Bucket: BUCKET_NAME }).promise();
-      console.log('✅ AWS S3 connection successful');
+    //  console.log('AWS S3 connection successful');
     }
     return true;
   } catch (error) {
     console.error('❌ Connection test failed:', error.message);
     
-    if (isTigris) {
-      console.log('💡 Tigris troubleshooting:');
-      console.log('   1. Check if bucket exists in Tigris console');
-      console.log('   2. Verify Tigris credentials');
-      console.log('   3. Check endpoint URL: ', process.env.AWS_ENDPOINT_URL_S3);
-    }
+    // if (isTigris) {
+    //   console.log('💡 Tigris troubleshooting:');
+    //   console.log('   1. Check if bucket exists in Tigris console');
+    //   console.log('   2. Verify Tigris credentials');
+    //   console.log('   3. Check endpoint URL: ', process.env.AWS_ENDPOINT_URL_S3);
+    // }
     
     return false;
   }
 };
 
 // Test connection on startup
-testS3Connection().then(success => {
-  if (success) {
-    console.log('🚀 Storage provider initialized successfully');
-  } else {
-    console.log('⚠️  Storage provider may not be fully functional');
-  }
-});
+// testS3Connection().then(success => {
+//   if (success) {
+//     console.log('🚀 Storage provider initialized successfully');
+//   } else {
+//     console.log('⚠️  Storage provider may not be fully functional');
+//   }
+// });
 
 export default {
   uploadToS3,

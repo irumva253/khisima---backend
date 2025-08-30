@@ -6,7 +6,8 @@ import {
   getApplicationById,
   updateApplicationStatus,
   deleteApplication,
-  getApplicationStats
+  getApplicationStats,
+  getResumeDownloadUrl
 } from '../controllers/careerController.js';
 import { protect, admin } from '../middleware/authMiddleware.js';
 
@@ -83,4 +84,6 @@ router.route('/applications/:id/status')
 router.route('/stats')
   .get(protect, admin, getApplicationStats);
 
+router.route('/applications/:id/download')
+  .get(protect, admin, getResumeDownloadUrl);
 export default router;

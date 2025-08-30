@@ -1,7 +1,7 @@
 import asyncHandler from '../middleware/asyncHandler.js';
 import CareerApplication from '../models/careerModel.js';
 import sendEmail from '../utils/sendEmail.js';
-import { uploadToS3, deleteFromS3 } from '../utils/s3Upload.js';
+import { uploadToS3, deleteFromS3, getSignedDownloadUrl } from '../utils/s3Upload.js';
 import { v4 as uuidv4 } from 'uuid';
 
 // @desc    Submit career application
@@ -250,6 +250,49 @@ const submitApplication = asyncHandler(async (req, res) => {
   throw new Error('Failed to submit application. Please try again.');
 }
 });
+
+// @desc    Get signed download URL for resume (Admin only)
+// @route   GET /api/careers/applications/:id/download
+// @access  Private/Admin
+const getResumeDownloadUrl = asyncHandler(async (req, res) => {
+  try {
+    const application = await CareerApplication.findById(req.params.id);
+
+    if (!application) {
+      res.status(404);
+      throw new Error('Application not found');
+    }
+
+    if (!application.resumeFileKey) {
+      res.status(404);
+      throw new Error('Resume not found');
+    }
+
+    // Generate signed URL for download (valid for 1 hour)
+    const signedUrl = await getSignedDownloadUrl(application.resumeFileKey, 3600);
+
+    res.json({
+      success: true,
+      data: {
+        downloadUrl: signedUrl,
+        fileName: application.resumeFileName,
+        expiresAt: new Date(Date.now() + 3600000).toISOString() // 1 hour from now
+      }
+    });
+
+  } catch (error) {
+    console.error('Get download URL error:', error);
+    
+    if (error.message.includes('NoSuchKey')) {
+      res.status(404);
+      throw new Error('Resume file not found in storage');
+    }
+    
+    res.status(500);
+    throw new Error('Failed to generate download link');
+  }
+});
+
 
 // @desc    Get all applications (Admin only)
 // @route   GET /api/careers/applications
@@ -550,5 +593,6 @@ export {
   getApplicationById,
   updateApplicationStatus,
   deleteApplication,
-  getApplicationStats
+  getApplicationStats,
+  getResumeDownloadUrl
 };
