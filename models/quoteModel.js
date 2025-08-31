@@ -115,17 +115,13 @@ const quoteSchema = new mongoose.Schema({
     maxlength: [2000, 'Description cannot exceed 2000 characters']
   },
 
-  // File Information
+  // File Information (Updated for S3)
   files: [{
     originalName: {
       type: String,
       required: true
     },
-    filename: {
-      type: String,
-      required: true
-    },
-    path: {
+    s3Key: {
       type: String,
       required: true
     },
@@ -146,7 +142,7 @@ const quoteSchema = new mongoose.Schema({
   // Quote Status & Admin Fields
   status: {
     type: String,
-    enum: ['pending', 'reviewing', 'quoted', 'accepted', 'rejected', 'completed'],
+    enum: ['pending', 'reviewing', 'quoted', 'accepted', 'rejected', 'completed', 'expired'],
     default: 'pending'
   },
   priority: {
@@ -159,7 +155,7 @@ const quoteSchema = new mongoose.Schema({
     min: [0, 'Cost cannot be negative']
   },
   estimatedDuration: {
-    type: String, // e.g., "3-5 business days"
+    type: String,
     trim: true
   },
   quoteNotes: {
@@ -244,7 +240,7 @@ const quoteSchema = new mongoose.Schema({
     },
     attachments: [{
       filename: String,
-      path: String,
+      s3Key: String,
       mimetype: String,
       size: Number
     }]
@@ -258,10 +254,10 @@ const quoteSchema = new mongoose.Schema({
   
   // Analytics
   responseTime: {
-    type: Number // Time in hours to first response
+    type: Number
   },
   completionTime: {
-    type: Number // Time in hours from quote to completion
+    type: Number
   }
 }, {
   timestamps: true,
@@ -269,7 +265,7 @@ const quoteSchema = new mongoose.Schema({
   toObject: { virtuals: true }
 });
 
-// Indexes for better query performance
+// Indexes
 quoteSchema.index({ email: 1 });
 quoteSchema.index({ status: 1 });
 quoteSchema.index({ createdAt: -1 });
@@ -278,17 +274,15 @@ quoteSchema.index({ sourceLanguage: 1, targetLanguages: 1 });
 quoteSchema.index({ quotedAt: 1 });
 quoteSchema.index({ deadline: 1 });
 
-// Virtual for full name
+// Virtuals
 quoteSchema.virtual('fullName').get(function() {
   return `${this.firstName} ${this.lastName}`;
 });
 
-// Virtual for quote age
 quoteSchema.virtual('ageInDays').get(function() {
   return Math.floor((Date.now() - this.createdAt) / (1000 * 60 * 60 * 24));
 });
 
-// Virtual for time until deadline
 quoteSchema.virtual('timeUntilDeadline').get(function() {
   if (!this.deadline) return null;
   const diffTime = this.deadline - Date.now();
@@ -296,24 +290,20 @@ quoteSchema.virtual('timeUntilDeadline').get(function() {
   return diffDays;
 });
 
-// Virtual for total file size
 quoteSchema.virtual('totalFileSize').get(function() {
   return this.files.reduce((total, file) => total + file.size, 0);
 });
 
 // Pre-save middleware
 quoteSchema.pre('save', function(next) {
-  // Set quote validity period (30 days from quoted date)
   if (this.isModified('quotedAt') && this.quotedAt) {
     this.quoteValidUntil = new Date(this.quotedAt.getTime() + (30 * 24 * 60 * 60 * 1000));
   }
   
-  // Calculate response time when first quoted
   if (this.isModified('quotedAt') && this.quotedAt && !this.responseTime) {
     this.responseTime = Math.floor((this.quotedAt - this.createdAt) / (1000 * 60 * 60));
   }
   
-  // Update status based on quote validity
   if (this.quoteValidUntil && this.quoteValidUntil < new Date() && this.status === 'quoted') {
     this.status = 'expired';
   }
@@ -380,7 +370,6 @@ quoteSchema.methods.updateStatus = function(newStatus, notes = '') {
 };
 
 quoteSchema.methods.calculateEstimate = function() {
-  // Basic estimation logic - can be enhanced based on business rules
   let baseCost = 0;
   
   if (this.wordCount) {
@@ -388,7 +377,6 @@ quoteSchema.methods.calculateEstimate = function() {
     baseCost = this.wordCount * ratePerWord;
   }
   
-  // Apply multipliers based on project type
   const typeMultipliers = {
     'Legal Documents': 1.5,
     'Medical Translation': 1.6,
@@ -400,9 +388,8 @@ quoteSchema.methods.calculateEstimate = function() {
   const multiplier = typeMultipliers[this.projectType] || 1.0;
   baseCost *= multiplier;
   
-  // Rush job multiplier
   if (this.deadline && this.timeUntilDeadline < 3) {
-    baseCost *= 1.5; // 50% rush fee
+    baseCost *= 1.5;
   }
   
   this.estimatedCost = Math.round(baseCost);
@@ -410,20 +397,19 @@ quoteSchema.methods.calculateEstimate = function() {
 };
 
 quoteSchema.methods.getLanguagePairRate = function() {
-  // Simplified rate calculation - in real app, this would be more complex
   const commonPairs = ['English', 'French', 'Spanish'];
   const africanLanguages = ['Kinyarwanda', 'Swahili', 'Amharic', 'Yoruba', 'Igbo', 'Hausa'];
   
-  let baseRate = 0.10; // $0.10 per word base rate
+  let baseRate = 0.10;
   
   if (africanLanguages.includes(this.sourceLanguage) || 
       this.targetLanguages.some(lang => africanLanguages.includes(lang))) {
-    baseRate = 0.15; // Higher rate for African languages
+    baseRate = 0.15;
   }
   
   if (!commonPairs.includes(this.sourceLanguage) && 
       !this.targetLanguages.some(lang => commonPairs.includes(lang))) {
-    baseRate = 0.20; // Rare language pair
+    baseRate = 0.20;
   }
   
   return baseRate;

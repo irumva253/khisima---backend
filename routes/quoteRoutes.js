@@ -1,7 +1,5 @@
 import express from 'express';
 import multer from 'multer';
-import path from 'path';
-import { fileURLToPath } from 'url';
 import { protect, admin } from '../middleware/authMiddleware.js';
 import {
   submitQuoteRequest,
@@ -12,26 +10,14 @@ import {
   getQuoteStats,
   bulkUpdateQuotes,
   addCommunication,
-  exportQuotes
+  exportQuotes,
+  getQuoteFileDownloadUrl
 } from '../controllers/quoteController.js';
 
 const router = express.Router();
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
 
-// Configure multer for file uploads
-const storage = multer.diskStorage({
-  destination: function (req, file, cb) {
-    const uploadPath = path.join(process.cwd(), 'uploads', 'quotes');
-    cb(null, uploadPath);
-  },
-  filename: function (req, file, cb) {
-    // Create unique filename with timestamp and random string
-    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-    const extension = path.extname(file.originalname);
-    cb(null, file.fieldname + '-' + uniqueSuffix + extension);
-  }
-});
+// Configure multer for memory storage (for S3 uploads)
+const storage = multer.memoryStorage();
 
 // File filter to allow only specific file types
 const fileFilter = (req, file, cb) => {
@@ -46,13 +32,10 @@ const fileFilter = (req, file, cb) => {
     'application/vnd.openxmlformats-officedocument.presentationml.presentation'
   ];
 
-  const allowedExtensions = ['.pdf', '.doc', '.docx', '.txt', '.xls', '.xlsx', '.ppt', '.pptx'];
-  const fileExtension = path.extname(file.originalname).toLowerCase();
-
-  if (allowedMimeTypes.includes(file.mimetype) && allowedExtensions.includes(fileExtension)) {
+  if (allowedMimeTypes.includes(file.mimetype)) {
     cb(null, true);
   } else {
-    cb(new Error('Invalid file type. Only PDF, DOC, DOCX, TXT, XLS, XLSX, PPT, and PPTX files are allowed.'), false);
+    cb(new Error('Invalid file type. Only document files are allowed.'), false);
   }
 };
 
@@ -102,14 +85,15 @@ const handleMulterErrors = (err, req, res, next) => {
 router.post('/', upload.array('files', 10), handleMulterErrors, submitQuoteRequest);
 
 // Admin Routes (Protected)
-router.use(protect); // All routes below this require authentication
-router.use(admin);   // All routes below this require admin privileges
+router.use(protect);
+router.use(admin);
 
 // GET routes
 router.get('/stats', getQuoteStats);
 router.get('/export', exportQuotes);
 router.get('/', getQuotes);
 router.get('/:id', getQuoteById);
+router.get('/:id/files/:fileId/download', getQuoteFileDownloadUrl);
 
 // PUT routes
 router.put('/bulk', bulkUpdateQuotes);

@@ -1,8 +1,8 @@
 import Quote from '../models/quoteModel.js';
 import sendEmail from '../utils/sendEmail.js';
 import asyncHandler from '../middleware/asyncHandler.js';
-import path from 'path';
-import fs from 'fs/promises';
+import { uploadToS3, deleteFromS3, getSignedDownloadUrl } from '../utils/s3Upload.js';
+import { v4 as uuidv4 } from 'uuid';
 
 // @desc    Submit a new quote request
 // @route   POST /api/quotes
@@ -43,25 +43,38 @@ export const submitQuoteRequest = asyncHandler(async (req, res) => {
     throw new Error('Please fill in all required fields');
   }
 
-  // Process uploaded files
+  // Process uploaded files to S3
   const files = [];
-  if (req.files && req.files.length > 0) {
-    for (const file of req.files) {
-      files.push({
-        originalName: file.originalname,
-        filename: file.filename,
-        path: file.path,
-        mimetype: file.mimetype,
-        size: file.size
-      });
-    }
-  }
-
-  // Get client IP and user agent for tracking
-  const ipAddress = req.ip || req.connection.remoteAddress;
-  const userAgent = req.get('User-Agent');
+  const uploadedFileKeys = [];
 
   try {
+    // Upload files to S3 if any
+    if (req.files && req.files.length > 0) {
+      for (const file of req.files) {
+        try {
+          const fileKey = `quotes/${uuidv4()}-${file.originalname}`;
+          
+          // Upload to S3
+          await uploadToS3(file.buffer, fileKey, file.mimetype);
+          uploadedFileKeys.push(fileKey);
+          
+          files.push({
+            originalName: file.originalname,
+            s3Key: fileKey,
+            mimetype: file.mimetype,
+            size: file.size
+          });
+        } catch (uploadError) {
+          console.error('Failed to upload file to S3:', uploadError);
+          // Continue with other files
+        }
+      }
+    }
+
+    // Get client IP and user agent
+    const ipAddress = req.ip || req.connection.remoteAddress;
+    const userAgent = req.get('User-Agent');
+
     // Create quote request
     const quote = await Quote.create({
       firstName,
@@ -131,8 +144,8 @@ export const submitQuoteRequest = asyncHandler(async (req, res) => {
           
           <div class="info-box">
             <h3>📞 Need to reach us?</h3>
-            <p>Email: hello@khisima.com</p>
-            <p>Phone: +250 788 123 456</p>
+            <p>Email:quote@khisima.com</p>
+            <p>Phone: +250 789 619 370</p>
             <p>We speak your language! Our team is available in 50+ languages.</p>
           </div>
           
@@ -143,7 +156,7 @@ export const submitQuoteRequest = asyncHandler(async (req, res) => {
         </div>
         <div class="footer">
           <p>Khisima - Bridging Cultures Through Language</p>
-          <p>Kigali, Rwanda | hello@khisima.com | +250 788 123 456</p>
+          <p>Kigali, Rwanda |quote@khisima.com | +250 789 619 370</p>
         </div>
       </body>
       </html>
@@ -276,13 +289,13 @@ export const submitQuoteRequest = asyncHandler(async (req, res) => {
     });
 
   } catch (error) {
-    // Clean up uploaded files if quote creation fails
-    if (req.files && req.files.length > 0) {
-      for (const file of req.files) {
+    // Clean up uploaded files from S3 if quote creation fails
+    if (uploadedFileKeys.length > 0) {
+      for (const fileKey of uploadedFileKeys) {
         try {
-          await fs.unlink(file.path);
-        } catch (unlinkError) {
-          console.error('Error deleting file:', unlinkError);
+          await deleteFromS3(fileKey);
+        } catch (cleanupError) {
+          console.error('Error deleting file from S3:', cleanupError);
         }
       }
     }
@@ -290,6 +303,49 @@ export const submitQuoteRequest = asyncHandler(async (req, res) => {
     console.error('Quote submission error:', error);
     res.status(500);
     throw new Error('Failed to submit quote request. Please try again.');
+  }
+});
+
+// @desc    Get signed download URL for quote file
+// @route   GET /api/quotes/:id/files/:fileId/download
+// @access  Private/Admin
+export const getQuoteFileDownloadUrl = asyncHandler(async (req, res) => {
+  try {
+    const quote = await Quote.findById(req.params.id);
+
+    if (!quote) {
+      res.status(404);
+      throw new Error('Quote not found');
+    }
+
+    const file = quote.files.id(req.params.fileId);
+    if (!file || !file.s3Key) {
+      res.status(404);
+      throw new Error('File not found');
+    }
+
+    // Generate signed URL for download (valid for 1 hour)
+    const signedUrl = await getSignedDownloadUrl(file.s3Key, 3600);
+
+    res.json({
+      success: true,
+      data: {
+        downloadUrl: signedUrl,
+        fileName: file.originalName,
+        expiresAt: new Date(Date.now() + 3600000).toISOString()
+      }
+    });
+
+  } catch (error) {
+    console.error('Get download URL error:', error);
+    
+    if (error.message.includes('NoSuchKey')) {
+      res.status(404);
+      throw new Error('File not found in storage');
+    }
+    
+    res.status(500);
+    throw new Error('Failed to generate download link');
   }
 });
 
@@ -470,14 +526,14 @@ export const updateQuote = asyncHandler(async (req, res) => {
           <div class="quote-box">
             <h3>⏰ Quote Validity</h3>
             <p>This quote is valid until <strong>${quote.quoteValidUntil ? quote.quoteValidUntil.toLocaleDateString() : 'contact us'}</strong>.</p>
-            <p>To proceed, simply reply to this email or call us at +250 788 123 456.</p>
+            <p>To proceed, simply reply to this email or call us at +250 789 619 370.</p>
           </div>
           
           <div style="text-align: center; margin: 20px 0;">
-            <a href="mailto:hello@khisima.com?subject=Quote Approval - ${quote._id.toString().slice(-8).toUpperCase()}" class="button">
+            <a href="mailto:quote@khisima.com?subject=Quote Approval - ${quote._id.toString().slice(-8).toUpperCase()}" class="button">
               ✅ Accept Quote
             </a>
-            <a href="mailto:hello@khisima.com?subject=Quote Questions - ${quote._id.toString().slice(-8).toUpperCase()}" class="button" style="background: #6b7280;">
+            <a href="mailto:quote@khisima.com?subject=Quote Questions - ${quote._id.toString().slice(-8).toUpperCase()}" class="button" style="background: #6b7280;">
               ❓ Ask Questions
             </a>
           </div>
@@ -489,7 +545,7 @@ export const updateQuote = asyncHandler(async (req, res) => {
         </div>
         <div class="footer">
           <p>Khisima - Bridging Cultures Through Language</p>
-          <p>Kigali, Rwanda | hello@khisima.com | +250 788 123 456</p>
+          <p>Kigali, Rwanda |quote@khisima.com | +250 789 619 370</p>
         </div>
       </body>
       </html>
@@ -530,12 +586,14 @@ export const deleteQuote = asyncHandler(async (req, res) => {
     throw new Error('Quote not found');
   }
 
-  // Delete associated files
+  // Delete associated files from S3
   for (const file of quote.files) {
     try {
-      await fs.unlink(file.path);
+      if (file.s3Key) {
+        await deleteFromS3(file.s3Key);
+      }
     } catch (error) {
-      console.error('Error deleting file:', error);
+      console.error('Error deleting file from S3:', error);
     }
   }
 
