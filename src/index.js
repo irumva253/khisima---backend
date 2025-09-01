@@ -21,6 +21,7 @@ import notificationRoutes from '../routes/notificationRoutes.js';
 import partnerRoutes from '../routes/partnerRoutes.js';
 import careerRoutes from '../routes/careerRoutes.js';
 import quoteRoutes from '../routes/quoteRoutes.js';
+import workplaceRoutes from '../routes/workplaceRoutes.js';
 
 
 dotenv.config();
@@ -58,6 +59,7 @@ app.use('/api/partners', partnerRoutes);
 app.use('/api/resources', resourceRouts);
 app.use('/api/careers', careerRoutes);
 app.use('/api/quotes', quoteRoutes);
+app.use('/api/workplaces', workplaceRoutes);
 
 // Static files for uploads
 const __dirname = path.resolve();
