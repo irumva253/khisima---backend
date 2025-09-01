@@ -14,6 +14,7 @@ import serviceRoutes from '../routes/serviceRoutes.js';
 
 import solutionCategoryRoutes from '../routes/solutionCategoryRoutes.js';
 import solutionRoutes from '../routes/solutionRoutes.js';
+import resourceRouts from '../routes/resourceRoutes.js';
 
 import notificationRoutes from '../routes/notificationRoutes.js';
 
@@ -54,6 +55,7 @@ app.use('/api/notifications', notificationRoutes);
 app.use('/api/s3', s3Routes);
 
 app.use('/api/partners', partnerRoutes);
+app.use('/api/resources', resourceRouts);
 app.use('/api/careers', careerRoutes);
 app.use('/api/quotes', quoteRoutes);
 
