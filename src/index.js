@@ -17,6 +17,7 @@ import solutionRoutes from '../routes/solutionRoutes.js';
 import resourceRoutes from '../routes/resourceRoutes.js';
 
 import notificationRoutes from '../routes/notificationRoutes.js';
+import subscriberRoutes from '../routes/subscriberRoutes.js';
 
 import partnerRoutes from '../routes/partnerRoutes.js';
 import careerRoutes from '../routes/careerRoutes.js';
@@ -37,8 +38,7 @@ const app = express();
 // ----------------------
 const allowedOrigins = [
   'http://localhost:5173',            // development frontend
-  'https://www.khisima.com',
-  'http://www.khisima.com'          // production frontend URL from env
+  'https://www.khisima.com',          // production frontend URL from env
 ];
 
 app.use(cors({
@@ -69,6 +69,7 @@ app.use('/api/services', serviceRoutes);
 app.use('/api/solutions', solutionRoutes);
 
 app.use('/api/notifications', notificationRoutes);
+app.use('/api/subscribers', subscriberRoutes);
 app.use('/api/s3', s3Routes);
 
 app.use('/api/partners', partnerRoutes);
