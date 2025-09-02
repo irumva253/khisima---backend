@@ -14,7 +14,7 @@ import serviceRoutes from '../routes/serviceRoutes.js';
 
 import solutionCategoryRoutes from '../routes/solutionCategoryRoutes.js';
 import solutionRoutes from '../routes/solutionRoutes.js';
-import resourceRouts from '../routes/resourceRoutes.js';
+import resourceRoutes from '../routes/resourceRoutes.js';
 
 import notificationRoutes from '../routes/notificationRoutes.js';
 
@@ -23,29 +23,45 @@ import careerRoutes from '../routes/careerRoutes.js';
 import quoteRoutes from '../routes/quoteRoutes.js';
 import workplaceRoutes from '../routes/workplaceRoutes.js';
 
-
 dotenv.config();
 
 const port = process.env.PORT || 5000;
 
+// Connect to DB
 connectDB();
 
 const app = express();
 
-// Enable CORS for frontend
-app.use(
-  cors({
-    origin: 'http://localhost:5173', 
-    credentials: true,
-  })
-);
+// ----------------------
+// CORS Configuration
+// ----------------------
+const allowedOrigins = [
+  'http://localhost:5173',            // development frontend
+  'https://www.khisima.com',
+  'http://www.khisima.com'          // production frontend URL from env
+];
 
+app.use(cors({
+  origin: (origin, callback) => {
+    if (!origin || allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
+  credentials: true,
+}));
+
+// ----------------------
 // Middleware
+// ----------------------
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
 
-// Routes
+// ----------------------
+// API Routes
+// ----------------------
 app.use('/api/auth', authRoutes);
 app.use('/api/service-categories', serviceCategoryRoutes);
 app.use('/api/solution-categories', solutionCategoryRoutes);
@@ -56,31 +72,43 @@ app.use('/api/notifications', notificationRoutes);
 app.use('/api/s3', s3Routes);
 
 app.use('/api/partners', partnerRoutes);
-app.use('/api/resources', resourceRouts);
+app.use('/api/resources', resourceRoutes);
 app.use('/api/careers', careerRoutes);
 app.use('/api/quotes', quoteRoutes);
 app.use('/api/workplaces', workplaceRoutes);
 
-// Static files for uploads
+// ----------------------
+// Static Files & Frontend
+// ----------------------
 const __dirname = path.resolve();
 
+// Uploads
 if (process.env.NODE_ENV === 'production') {
   app.use('/uploads', express.static('/var/data/uploads'));
-  app.use(express.static(path.join(__dirname, '/frontend/build')));
-
-  app.get('*', (req, res) =>
-    res.sendFile(path.resolve(__dirname, 'frontend', 'build', 'index.html'))
-  );
 } else {
   app.use('/uploads', express.static(path.join(__dirname, '/uploads')));
+}
+
+// Frontend build (production)
+if (process.env.NODE_ENV === 'production') {
+  app.use(express.static(path.join(__dirname, '../frontend/build')));
+
+  app.get('*', (req, res) =>
+    res.sendFile(path.resolve(__dirname, '../frontend/build', 'index.html'))
+  );
+} else {
   app.get('/', (req, res) => res.send('API is running...'));
 }
 
-// Error middleware
+// ----------------------
+// Error Middleware
+// ----------------------
 app.use(notFound);
 app.use(errorHandler);
 
-// Server
+// ----------------------
+// Start Server
+// ----------------------
 app.listen(port, () => {
   console.log(`Server running in ${process.env.NODE_ENV} mode on port ${port}`);
 });
