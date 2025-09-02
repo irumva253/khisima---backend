@@ -20,12 +20,13 @@ const submitApplication = asyncHandler(async (req, res) => {
     portfolioUrl,
     availability,
     workType,
+    country,
     expectedSalary,
     referralSource
   } = req.body;
 
   // Validate required fields
-  if (!firstName || !lastName || !email || !position || !experience || !languages || !coverLetter) {
+  if (!firstName || !lastName || !email || !position || !experience || !languages || !coverLetter || !country) {
     res.status(400);
     throw new Error('Please fill in all required fields');
   }
@@ -59,7 +60,8 @@ const submitApplication = asyncHandler(async (req, res) => {
       availability,
       workType,
       expectedSalary,
-      referralSource
+      referralSource,
+      country
     });
 
     // Send confirmation email to applicant
@@ -85,6 +87,7 @@ const submitApplication = asyncHandler(async (req, res) => {
               <li><strong>Experience Level:</strong> ${experience} years</li>
               <li><strong>Work Type:</strong> ${workType}</li>
               <li><strong>Availability:</strong> ${availability}</li>
+              <li><strong>Country:</strong> ${country}</li>
             </ul>
           </div>
           
@@ -142,6 +145,10 @@ const submitApplication = asyncHandler(async (req, res) => {
               <div>
                 <strong style="color: #374151;">Work Type:</strong><br/>
                 <span style="color: #6b7280;">${workType}</span>
+              </div>
+              <div>
+                <strong style="color: #374151;">Country:</strong><br/>
+                <span style="color: #6b7280;">${country || 'Not provided'}</span>
               </div>
             </div>
           </div>
@@ -220,6 +227,7 @@ const submitApplication = asyncHandler(async (req, res) => {
         lastName: application.lastName,
         email: application.email,
         position: application.position,
+        country: application.country,
         status: application.status,
         submittedAt: application.createdAt
       }
@@ -302,6 +310,7 @@ const getApplications = asyncHandler(async (req, res) => {
   const limit = parseInt(req.query.limit) || 10;
   const status = req.query.status;
   const position = req.query.position;
+  const country = req.query.country;
   const sortBy = req.query.sortBy || 'createdAt';
   const sortOrder = req.query.sortOrder === 'asc' ? 1 : -1;
 
@@ -309,6 +318,7 @@ const getApplications = asyncHandler(async (req, res) => {
   const filter = {};
   if (status && status !== 'all') filter.status = status;
   if (position && position !== 'all') filter.position = position;
+  if (country && country !== 'all') filter.country = country;
 
   // Build sort
   const sort = {};

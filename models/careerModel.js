@@ -108,6 +108,11 @@ const careerApplicationSchema = new mongoose.Schema(
       enum: ['remote', 'freelance', 'hybrid', 'onsite'],
       default: 'remote'
     },
+    country: {
+    type: String,
+    trim: true,
+    maxlength: 100
+  },
     expectedSalary: {
       type: String,
       trim: true,
