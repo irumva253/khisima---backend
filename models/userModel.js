@@ -21,11 +21,11 @@ const userSchema = new mongoose.Schema(
     email: {
       type: String,
       required: [true, 'Email is required'],
-      unique: true, // unique index here
+      unique: true, // keep only this for unique index
       trim: true,
       lowercase: true,
       validate: {
-        validator: function(v) {
+        validator: function (v) {
           return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v);
         },
         message: props => `${props.value} is not a valid email address!`
@@ -35,7 +35,7 @@ const userSchema = new mongoose.Schema(
       type: String,
       trim: true,
       validate: {
-        validator: function(v) {
+        validator: function (v) {
           return !v || /^\+?[\d\s\-\(\)]{10,}$/.test(v);
         },
         message: props => `${props.value} is not a valid phone number!`
@@ -56,7 +56,11 @@ const userSchema = new mongoose.Schema(
     lastLogin: Date,
     loginAttempts: { type: Number, default: 0 },
     lockUntil: Date,
-    agreeToTerms: { type: Boolean, required: [true, 'You must agree to the terms and conditions'], default: false },
+    agreeToTerms: {
+      type: Boolean,
+      required: [true, 'You must agree to the terms and conditions'],
+      default: false
+    },
     agreeToMarketing: { type: Boolean, default: false },
     profileImage: String,
     timezone: { type: String, default: 'UTC' },
@@ -72,7 +76,7 @@ const userSchema = new mongoose.Schema(
     timestamps: true,
     toJSON: {
       virtuals: true,
-      transform: function(doc, ret) {
+      transform: function (doc, ret) {
         delete ret.password;
         delete ret.__v;
         delete ret.verificationToken;
@@ -90,15 +94,15 @@ const userSchema = new mongoose.Schema(
 );
 
 // Virtual for full name
-userSchema.virtual('fullName').get(function() {
+userSchema.virtual('fullName').get(function () {
   return `${this.firstName} ${this.lastName}`;
 });
 
-// Additional indexes
+// Keep only compound indexes you actually need
 userSchema.index({ status: 1, role: 1 });
 
 // Hash password before saving
-userSchema.pre('save', async function(next) {
+userSchema.pre('save', async function (next) {
   if (!this.isModified('password')) return next();
   try {
     const salt = await bcrypt.genSalt(10);
@@ -110,31 +114,35 @@ userSchema.pre('save', async function(next) {
 });
 
 // Methods
-userSchema.methods.matchPassword = async function(enteredPassword) {
+userSchema.methods.matchPassword = async function (enteredPassword) {
   return await bcrypt.compare(enteredPassword, this.password);
 };
 
-userSchema.methods.generateVerificationToken = function() {
+userSchema.methods.generateVerificationToken = function () {
   const token = crypto.randomBytes(20).toString('hex');
   this.verificationToken = crypto.createHash('sha256').update(token).digest('hex');
   return token;
 };
 
-userSchema.methods.generatePasswordResetToken = function() {
+userSchema.methods.generatePasswordResetToken = function () {
   const resetToken = crypto.randomBytes(20).toString('hex');
   this.passwordResetToken = crypto.createHash('sha256').update(resetToken).digest('hex');
   this.passwordResetExpires = Date.now() + 5 * 60 * 1000; // 5 minutes
   return resetToken;
 };
 
-userSchema.methods.incrementLoginAttempts = async function() {
-  if (this.lockUntil && this.lockUntil > Date.now()) throw new Error('Account is temporarily locked');
+userSchema.methods.incrementLoginAttempts = async function () {
+  if (this.lockUntil && this.lockUntil > Date.now()) {
+    throw new Error('Account is temporarily locked');
+  }
   this.loginAttempts += 1;
-  if (this.loginAttempts >= 5) this.lockUntil = Date.now() + 15 * 60 * 1000; // 15 mins
+  if (this.loginAttempts >= 5) {
+    this.lockUntil = Date.now() + 15 * 60 * 1000; // 15 mins
+  }
   await this.save();
 };
 
-userSchema.methods.resetLoginAttempts = async function() {
+userSchema.methods.resetLoginAttempts = async function () {
   this.loginAttempts = 0;
   this.lockUntil = undefined;
   await this.save();
