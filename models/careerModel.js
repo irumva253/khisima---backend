@@ -32,8 +32,8 @@ const careerApplicationSchema = new mongoose.Schema(
       enum: [
         'translator',
         'interpreter', 
-        'intern-linguistic',
-        'intern-tech',
+        'site-interpreter',
+        'language-data-collector',
         'other'
       ]
     },

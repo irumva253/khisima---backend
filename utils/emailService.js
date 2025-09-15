@@ -3,15 +3,18 @@ import dotenv from 'dotenv';
 
 dotenv.config();
 
-// Create transporter
+// Create transporter with your domain's SMTP settings
 const transporter = nodemailer.createTransport({
-  service: 'gmail', // or your preferred email service
+  host: process.env.EMAIL_HOST || 'mail.khisima.com', // Your Hostinger SMTP server
+  port: parseInt(process.env.EMAIL_PORT) || 587,
+  secure: false, // Use TLS
   auth: {
-    user: process.env.EMAIL_USER, // Your email
-    pass: process.env.EMAIL_PASS // Your app password
+    user: process.env.EMAIL_USER, // Your domain email (e.g., noreply@yourdomain.com)
+    pass: process.env.EMAIL_PASS // Your email password
   },
-  secure: true,
-  port: 587
+  tls: {
+    rejectUnauthorized: false // For self-signed certificates, remove if you have valid SSL
+  }
 });
 
 // Verify connection configuration
@@ -23,7 +26,7 @@ transporter.verify((error, success) => {
   }
 });
 
-// Email templates
+// Email templates (remain the same as your original code)
 const getContactEmailTemplate = (data) => {
   const { firstName, lastName, email, phone, preferredLanguage, message, notificationId, submittedAt } = data;
   
@@ -581,7 +584,7 @@ const getAutoReplyTemplate = (data) => {
             }
             
             .message-box {
-                background: linear-gradient(135deg, #e0f2fe 0%, #b3e5fc 100%);
+                background: linear-gradient(135deg, #e0f2fe 0%, 'b3e5fc 100%');
                 padding: 30px;
                 border-radius: 10px;
                 margin: 25px 0;
@@ -699,7 +702,6 @@ const getAutoReplyTemplate = (data) => {
                         <div class="feature-title">Personal Touch</div>
                         <div class="feature-desc">Every conversation matters to us</div>
                     </div>
-                </div>
                 
                 <div class="cta-section">
                     <h3>While you wait, explore more about Khisima</h3>
@@ -731,7 +733,7 @@ const getAutoReplyTemplate = (data) => {
 export const sendContactEmail = async (contactData) => {
   try {
     const adminEmail = {
-      from: `"Khisima Contact Form" <${process.env.EMAIL_USER}>`,
+      from: `"Khisima Contact Form" <${process.env.EMAIL_USER}>`, // This will now show your domain
       to: process.env.ADMIN_EMAIL || process.env.EMAIL_USER,
       subject: `🚨 New Contact: ${contactData.firstName} ${contactData.lastName} - ${contactData.preferredLanguage}`,
       html: getContactEmailTemplate(contactData),
@@ -739,7 +741,7 @@ export const sendContactEmail = async (contactData) => {
     };
 
     const autoReply = {
-      from: `"Khisima Team" <${process.env.EMAIL_USER}>`,
+      from: `"Khisima Team" <${process.env.EMAIL_USER}>`, // This will now show your domain
       to: contactData.email,
       subject: `Thank you for contacting Khisima, ${contactData.firstName}! 🌍`,
       html: getAutoReplyTemplate(contactData)
@@ -774,7 +776,7 @@ export const sendTeamNotification = async (contactData, teamEmails = []) => {
 
   try {
     const teamNotifications = teamEmails.map(email => ({
-      from: `"Khisima Notifications" <${process.env.EMAIL_USER}>`,
+      from: `"Khisima Notifications" <${process.env.EMAIL_USER}>`, // This will now show your domain
       to: email,
       subject: `📢 Team Alert: New ${contactData.preferredLanguage} Contact - ${contactData.firstName} ${contactData.lastName}`,
       html: `
