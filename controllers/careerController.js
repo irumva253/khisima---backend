@@ -75,7 +75,7 @@ const submitApplication = asyncHandler(async (req, res) => {
           
           <p style="color: #4b5563; line-height: 1.6; margin-bottom: 20px;">
             We have successfully received your application for the <strong>${application.getPositionTitle()}</strong> position. 
-            Our team will review your application carefully and get back to you within 48 hours.
+            Our team will review your application carefully and get back to you.
           </p>
           
           <div style="background: #f3f4f6; padding: 20px; border-radius: 12px; margin: 20px 0;">
