@@ -113,11 +113,6 @@ const careerApplicationSchema = new mongoose.Schema(
     trim: true,
     maxlength: 100
   },
-    expectedSalary: {
-      type: String,
-      trim: true,
-      maxlength: [50, 'Expected salary cannot exceed 50 characters']
-    },
     referralSource: {
       type: String,
       enum: ['website', 'linkedin', 'referral', 'jobboard', 'university', 'social', 'other', ''],
@@ -168,8 +163,8 @@ careerApplicationSchema.methods.getPositionTitle = function() {
   const positions = {
     'translator': 'Freelance Translator',
     'interpreter': 'Remote Interpreter',
-    'intern-linguistic': 'Linguistic Research Intern',
-    'intern-tech': 'Tech & Localization Intern',
+    'site-interpreter': 'On-site Interpreter',
+    'language-data-collector': 'Language Data Collector',
     'other': 'Other Position'
   };
   return positions[this.position] || this.position;

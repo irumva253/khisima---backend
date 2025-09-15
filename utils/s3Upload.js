@@ -13,8 +13,6 @@ const isTigris = process.env.AWS_ENDPOINT_URL_S3 &&
                  process.env.AWS_ENDPOINT_URL_S3.includes('tigris') || 
                  process.env.AWS_ENDPOINT_URL_S3.includes('t3.storage.dev');
 
-//console.log('🌐 Using storage provider:', isTigris ? 'Tigris' : 'AWS S3');
-
 // Configure AWS SDK for Tigris
 const s3Config = {
   accessKeyId: process.env.AWS_ACCESS_KEY_ID,

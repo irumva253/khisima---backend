@@ -21,7 +21,6 @@ const submitApplication = asyncHandler(async (req, res) => {
     availability,
     workType,
     country,
-    expectedSalary,
     referralSource
   } = req.body;
 
@@ -59,7 +58,6 @@ const submitApplication = asyncHandler(async (req, res) => {
       portfolioUrl,
       availability,
       workType,
-      expectedSalary,
       referralSource,
       country
     });
@@ -177,14 +175,7 @@ const submitApplication = asyncHandler(async (req, res) => {
             <span style="color: #6b7280;">File: ${req.file.originalname}</span><br/>
             <span style="color: #6b7280;">S3 Key: ${resumeKey}</span>
           </div>
-          
-          ${expectedSalary ? `
-          <div style="margin-bottom: 20px;">
-            <strong style="color: #374151;">Expected Salary:</strong><br/>
-            <span style="color: #6b7280;">${expectedSalary}</span>
-          </div>
-          ` : ''}
-          
+                  
           ${referralSource ? `
           <div style="margin-bottom: 20px;">
             <strong style="color: #374151;">How they heard about us:</strong><br/>

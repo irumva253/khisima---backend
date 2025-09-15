@@ -679,7 +679,7 @@ const getAutoReplyTemplate = (data) => {
                 
                 <div class="message-box">
                     <p><strong>Dear ${firstName} ${lastName},</strong></p>
-                    <p>We have received your message and we're excited to connect with you! Our team will review your inquiry and get back to you within <strong>24 hours</strong>.</p>
+                    <p>We have received your message and we're excited to connect with you! Our team will review your inquiry and get back to you shortly.</p>
                     <p>At Khisima, we believe in the power of language to bridge cultures and create meaningful connections across Africa and beyond.</p>
                 </div>
                 
