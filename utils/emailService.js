@@ -5,15 +5,12 @@ dotenv.config();
 
 // Create transporter with your domain's SMTP settings
 const transporter = nodemailer.createTransport({
-  host: process.env.EMAIL_HOST || 'mail.khisima.com', // Your Hostinger SMTP server
-  port: parseInt(process.env.EMAIL_PORT) || 587,
-  secure: false, // Use TLS
+  host: process.env.EMAIL_HOST || 'smtp.hostinger.com',
+  port: parseInt(process.env.EMAIL_PORT) || 465,
+  secure: true, // Use SSL (required for port 465)
   auth: {
-    user: process.env.EMAIL_USER, // Your domain email (e.g., noreply@yourdomain.com)
-    pass: process.env.EMAIL_PASS // Your email password
-  },
-  tls: {
-    rejectUnauthorized: false // For self-signed certificates, remove if you have valid SSL
+    user: process.env.EMAIL_USER, // Hostinger email (e.g., noreply@khisima.com)
+    pass: process.env.EMAIL_PASS // email password
   }
 });
 
