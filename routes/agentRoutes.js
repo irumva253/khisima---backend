@@ -1,3 +1,4 @@
+// backend/routes/agentRoutes.js
 import express from 'express';
 import {
   // public
@@ -19,30 +20,31 @@ import { protect, admin } from '../middleware/authMiddleware.js';
 const router = express.Router();
 
 /* ---------------- Public endpoints ---------------- */
+router.route('/status')
+  .get(getPresence)          // GET /api/agent/status
+  .put(protect, admin, setPresence); // PUT /api/agent/status (admin only)
 
-// Read presence (user widget uses this)
-router.get('/status', getPresence);
+router.route('/search')
+  .get(searchAgent);         // GET /api/agent/search?q=...
 
-// Smart Q&A (quick/wiki/site)
-router.get('/search', searchAgent);
+router.route('/inbox')
+  .post(createInbox)         // POST /api/agent/inbox (user capture)
+  .get(protect, admin, listInbox); // GET /api/agent/inbox (admin only)
 
-// Capture inbox when admin offline
-router.post('/inbox', createInbox);
+router.route('/inbox/:id')
+  .put(protect, admin, updateInboxStatus); // PUT /api/agent/inbox/:id
 
-/* ---------------- Admin-protected endpoints ---------------- */
-router.use(protect, admin);
+/* ---------------- Admin-protected: Rooms ---------------- */
+router.route('/rooms')
+  .get(protect, admin, listRooms); // GET /api/agent/rooms
 
-// Set presence (Online/Offline)
-router.put('/status', setPresence);
+router.route('/rooms/:roomId/messages')
+  .get(protect, admin, getRoomMessages); // GET /api/agent/rooms/:roomId/messages
 
-// Rooms
-router.get('/rooms', listRooms);
-router.get('/rooms/:roomId/messages', getRoomMessages);
-router.post('/rooms/:roomId/forward', forwardTranscript);
-router.delete('/rooms/:roomId', deleteRoom);
+router.route('/rooms/:roomId/forward')
+  .post(protect, admin, forwardTranscript); // POST /api/agent/rooms/:roomId/forward
 
-// Inbox management
-router.get('/inbox', listInbox);
-router.put('/inbox/:id', updateInboxStatus);
+router.route('/rooms/:roomId')
+  .delete(protect, admin, deleteRoom); // DELETE /api/agent/rooms/:roomId
 
 export default router;

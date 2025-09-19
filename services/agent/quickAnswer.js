@@ -1,5 +1,3 @@
-// backend/services/agent/quickAnswer.js
-
 /* Helpers */
 const norm = (s = "") => s.toLowerCase().replace(/\s+/g, " ").trim();
 const tokenize = (s = "") => norm(s).split(" ").filter(Boolean);
@@ -70,7 +68,7 @@ export function quickAnswer(input) {
     return "Khisima is a language services & data company focused on African languages—translation/localization, language data for NLP/LLM, AI language consulting, cultural adaptation, voice-over/dubbing, and multilingual SEO.";
 
   if (hasAny(t, ["languages you support", "supported languages", "which languages", "language coverage"]))
-    return "We support Kinyarwanda, Swahili, English, French, Amharic, Luganda, Chewa, Wolof, Oromo—and more. Tell me your target pair and I’ll confirm coverage.";
+    return "We support Kinyarwanda, Swahili, English, French, Amharic, Luganda, Chewa, Wolof, Oromo—and more African languages. Tell me your target pair and I’ll confirm coverage.";
 
   if (hasAny(t, ["pricing", "how much", "rates", "cost"]))
     return "Pricing depends on scope, languages, and turnaround. Translation is usually per word; data services are per task/hour. Share your brief and we’ll prepare a tailored quote.";
