@@ -261,7 +261,7 @@ export const submitQuoteRequest = asyncHandler(async (req, res) => {
     `;
 
     await sendEmail({
-      to: process.env.ADMIN_EMAIL || 'admin@khisima.com',
+      to: process.env.ADMIN_EMAIL || 'olivier@khisima.com',
       subject: `🚨 New Quote Request - ${projectType} from ${firstName} ${lastName}`,
       html: adminEmailHtml
     });
